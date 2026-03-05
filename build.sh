@@ -17,16 +17,11 @@ cp Resources/Info.plist TradApp.app/Contents/
 
 echo "✍️  Signature..."
 xattr -cr TradApp.app
-codesign --force --deep --sign - TradApp.app
+codesign --force --deep --sign "TradApp Local" TradApp.app
 
 echo "🚀 Installation dans /Applications..."
 rm -rf /Applications/TradApp.app
 cp -R TradApp.app /Applications/
-
-# Effacer l'ancienne entrée TCC (nécessaire car la signature change à chaque build)
-echo "🔐 Réinitialisation des permissions accessibilité..."
-echo "   (entrez votre mot de passe macOS si demandé)"
-sudo tccutil reset Accessibility personal.tradapp 2>/dev/null || true
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
