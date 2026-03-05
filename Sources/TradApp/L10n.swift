@@ -67,11 +67,11 @@ enum L10n {
     static var settingsGenderM: String         { s("Masculin  (ครับ)", "Masculine  (ครับ)") }
     static var settingsGenderF: String         { s("Féminin  (ค่ะ)", "Feminine  (ค่ะ)") }
     static var settingsGeminiKey: String       { s("Clé Gemini", "Gemini Key") }
-    static var settingsGeminiOptional: String  { s("optionnel", "optional") }
-    static var settingsGeminiPlaceholder: String { s("Vide → Google Translate (gratuit, sans config)", "Empty → Google Translate (free, no config)") }
+    static var settingsGeminiOptional: String  { s("requis", "required") }
+    static var settingsGeminiPlaceholder: String { s("AIzaSy…", "AIzaSy…") }
     static var settingsGeminiHint: String      { s(
-        "Sans clé : Google Translate — gratuit, zéro config.\nAvec clé Gemini : correction grammaticale + adaptation de ton avancée.",
-        "No key: Google Translate — free, zero config.\nWith Gemini key: grammar correction + advanced tone adaptation."
+        "Clé gratuite sur aistudio.google.com/apikey — 1 500 traductions/jour incluses.",
+        "Free key at aistudio.google.com/apikey — 1,500 translations/day included."
     ) }
     static var settingsSave: String            { s("Enregistrer et fermer", "Save and close") }
     static var settingsShow: String            { s("Voir", "Show") }
