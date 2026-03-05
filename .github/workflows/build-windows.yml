@@ -1,0 +1,80 @@
+name: Build Windows .exe
+
+on:
+  workflow_dispatch:   # Déclenchement manuel depuis GitHub
+  push:
+    tags:
+      - 'v*-win'       # Ou en créant un tag du style v1.1-win
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Tesseract OCR
+        run: choco install tesseract -y
+
+      - name: Install Python dependencies
+        working-directory: windows
+        run: pip install -r requirements.txt pyinstaller
+
+      - name: Generate icon
+        working-directory: windows
+        run: python create_icon.py
+
+      - name: Build .exe with PyInstaller
+        working-directory: windows
+        run: |
+          $tess = "C:\Program Files\Tesseract-OCR"
+          pyinstaller tradapp.spec --clean `
+            --add-binary "$tess\tesseract.exe;." `
+            --add-data  "$tess\tessdata;tessdata"
+
+      - name: Create ZIP
+        working-directory: windows
+        run: Compress-Archive -Path dist\TradApp.exe -DestinationPath dist\TradApp-Windows.zip
+
+      - name: Get version tag
+        id: tag
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if ($tag -eq "") { $tag = "latest" }
+          echo "TAG=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.TAG }}
+          name: "TradApp Windows ${{ steps.tag.outputs.TAG }}"
+          body: |
+            ## TradApp Windows ${{ steps.tag.outputs.TAG }}
+
+            ### Installation
+            1. Télécharge **TradApp-Windows.zip** ci-dessous
+            2. Dézippe et lance **TradApp.exe**
+            3. L'app apparaît dans la barre des tâches (coin bas-droite)
+
+            > **Requis :** Windows 10 ou supérieur (64 bits)
+
+            ### Utilisation
+            - **Raccourci** `Ctrl+Shift+T` — traduit le texte sélectionné
+            - **Raccourci** `Ctrl+Shift+O` — OCR sur une zone de l'écran
+            - Clic droit sur l'icône dans la barre des tâches → Préférences
+
+            ### Fonctionnalités
+            - 33 langues, détection automatique de la langue source
+            - Google Translate (gratuit, sans config) + Gemini optionnel
+            - OCR intégré (Tesseract bundlé)
+            - Historique des 50 dernières traductions
+            - Tons formel / familier
+          files: windows/dist/TradApp-Windows.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
+          make_latest: false
