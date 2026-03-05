@@ -44,8 +44,29 @@ class TranslationEngine {
 
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                print("TradApp: erreur Gemini — \(error.localizedDescription)")
-                completion(nil)
+                print("TradApp: erreur réseau Gemini — \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    completion("⚠️ Erreur réseau — vérifiez votre connexion internet.")
+                }
+                return
+            }
+
+            if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+                // Extraire le message d'erreur Gemini si disponible
+                var apiMsg = "Erreur \(http.statusCode)"
+                if let data = data,
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let err = json["error"] as? [String: Any],
+                   let msg = err["message"] as? String {
+                    apiMsg = msg
+                }
+                print("TradApp: Gemini HTTP \(http.statusCode) — \(apiMsg)")
+                DispatchQueue.main.async {
+                    completion(http.statusCode == 400 || http.statusCode == 403
+                        ? "⚠️ Clé API Gemini invalide — vérifie-la dans les Préférences.\n\n(\(apiMsg))"
+                        : "⚠️ Gemini indisponible (\(apiMsg))"
+                    )
+                }
                 return
             }
 
@@ -55,7 +76,7 @@ class TranslationEngine {
                   let content = candidates.first?["content"] as? [String: Any],
                   let parts = content["parts"] as? [[String: Any]],
                   let text = parts.first?["text"] as? String else {
-                completion(nil)
+                DispatchQueue.main.async { completion("⚠️ Réponse Gemini invalide — réessaie.") }
                 return
             }
             completion(text.trimmingCharacters(in: .whitespacesAndNewlines))

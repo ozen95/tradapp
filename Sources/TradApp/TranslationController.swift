@@ -105,6 +105,12 @@ class TranslationController {
         TranslationEngine.shared.translate(text: text) { [weak self] translated, sourceLang in
             DispatchQueue.main.async {
                 self?.finishProcessing()
+                // Messages d'erreur (⚠️) → popup directe, jamais collés dans le champ
+                if let t = translated, t.hasPrefix("⚠️") {
+                    NSSound(named: "Funk")?.play()
+                    TranslationPopup.shared.show(text: t, sourceLang: nil, originalText: nil)
+                    return
+                }
                 if let t = translated {
                     TranslationHistory.shared.add(
                         original:   text,
