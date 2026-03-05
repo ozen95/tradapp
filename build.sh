@@ -16,6 +16,7 @@ cp Resources/Info.plist TradApp.app/Contents/
 [ -f Resources/AppIcon.icns ] && cp Resources/AppIcon.icns TradApp.app/Contents/Resources/
 
 echo "✍️  Signature..."
+xattr -cr TradApp.app
 codesign --force --deep --sign - TradApp.app
 
 echo "🚀 Installation dans /Applications..."
