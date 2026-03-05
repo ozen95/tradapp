@@ -5,41 +5,11 @@ import threading
 
 from languages import get_english_name
 
-
-def _google_request(text, target_lang, timeout=10):
-    """Raw Google Translate call. Returns (translated, source_lang) or (None, None)."""
-    try:
-        encoded = urllib.parse.quote(text)
-        url = (
-            f"https://translate.googleapis.com/translate_a/single"
-            f"?client=gtx&sl=auto&tl={target_lang}&dt=t&q={encoded}"
-        )
-        req = urllib.request.Request(url)
-        req.add_header('User-Agent', 'Mozilla/5.0')
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            data = json.loads(resp.read())
-            segments = data[0] if data else []
-            translated = ''.join(seg[0] for seg in segments if seg and seg[0])
-            source_lang = data[2] if len(data) > 2 else None
-            return (translated or None, source_lang)
-    except Exception as e:
-        print(f"[Google] {e}")
-        return (None, None)
+NO_KEY_MSG = "⚠️ Clé API Gemini manquante — ouvre les Préférences pour l'ajouter."
 
 
-def _translate_google(text, target_lang, callback):
+def _call_gemini(text, target_lang, api_key, tone, gender, callback):
     def _run():
-        translated, source_lang = _google_request(text, target_lang)
-        callback(translated, source_lang)
-    threading.Thread(target=_run, daemon=True).start()
-
-
-def _translate_gemini(text, target_lang, api_key, tone, gender, callback):
-    def _run():
-        # Detect source language quickly via Google
-        _, source_lang = _google_request(text[:200], 'en', timeout=5)
-
-        # Build Gemini prompt
         lang_name = get_english_name(target_lang)
         tone_desc = "casual and natural" if tone == "casual" else "polite and formal"
 
@@ -85,31 +55,36 @@ def _translate_gemini(text, target_lang, api_key, tone, gender, callback):
                 "contents": [{"role": "user", "parts": [{"text": prompt}]}],
                 "generationConfig": {"temperature": 0.3, "maxOutputTokens": 1024},
             }
-            body_bytes = json.dumps(body).encode('utf-8')
-            req = urllib.request.Request(url, data=body_bytes, method='POST')
+            req = urllib.request.Request(
+                url, data=json.dumps(body).encode('utf-8'), method='POST'
+            )
             req.add_header('Content-Type', 'application/json')
             with urllib.request.urlopen(req, timeout=15) as resp:
                 data = json.loads(resp.read())
                 translated = (
                     data['candidates'][0]['content']['parts'][0]['text'].strip()
                 )
-                callback(translated, source_lang)
+                callback(translated, None)
         except Exception as e:
-            print(f"[Gemini] {e} — falling back to Google")
-            translated, sl = _google_request(text, target_lang)
-            callback(translated, sl or source_lang)
+            print(f"[Gemini] {e}")
+            callback(None, None)
 
     threading.Thread(target=_run, daemon=True).start()
 
 
 def translate(text, settings, callback):
     """Main entry point. Calls callback(translated_text, source_lang)."""
-    target_lang = settings.get('target_language')
     api_key = settings.get('gemini_api_key')
-    tone = settings.get('tone')
-    gender = settings.get('gender')
 
-    if api_key:
-        _translate_gemini(text, target_lang, api_key, tone, gender, callback)
-    else:
-        _translate_google(text, target_lang, callback)
+    if not api_key:
+        callback(NO_KEY_MSG, None)
+        return
+
+    _call_gemini(
+        text,
+        target_lang=settings.get('target_language'),
+        api_key=api_key,
+        tone=settings.get('tone'),
+        gender=settings.get('gender'),
+        callback=callback,
+    )
